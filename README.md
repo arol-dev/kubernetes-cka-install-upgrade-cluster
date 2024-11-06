@@ -3,7 +3,7 @@
 
 ## Descripción del Laboratorio
 
-El objetivo de este laboratorio es configurar un cluster Kubernetes nativo utilizando la herramienta `kubeadm`, conectarse al cluster desde nuestro entorno de desarrollo (IDE), desplegar la aplicación **BookInfo** de Istio y actualizar la versión del cluster de la 1.30 a la 1.31. Para ello, utilizaremos **Vagrant** para automatizar el despliegue de las máquinas virtuales (VMs) en **VirtualBox**.
+El objetivo de este laboratorio es configurar un cluster Kubernetes nativo utilizando la herramienta `kubeadm`, conectarse al cluster desde nuestro entorno de desarrollo (IDE), desplegar la aplicación **BookInfo** de Istio y actualizar la versión del cluster de la 1.30 a la 1.31.2 Para ello, utilizaremos **Vagrant** para automatizar el despliegue de las máquinas virtuales (VMs) en **VirtualBox**.
 
 ## Prerrequisitos
 
@@ -213,20 +213,57 @@ Las VMs consisten en:
    kubectl -n kube-system rollout restart deployment coredns
    ```
 
-## Paso 9: Actualizar el Cluster de la Versión 1.30 a la 1.31
+# Paso 9: Preparación para la Actualización del Cluster
+
+Visto que estamos utilizando los repositorios de paquetes administrados por la comunidad (`pkgs.k8s.io`), es necesario habilitar el repositorio de paquetes para la versión deseada de Kubernetes. Ejecuta los siguientes comandos:
+
+1. **Verificar el contenido del archivo que define el repositorio apt de Kubernetes:**
+   ```bash
+   # En tu sistema, este archivo de configuración podría tener un nombre diferente
+   pager /etc/apt/sources.list.d/kubernetes.list
+   ```
+
+   Si ves una línea similar a:
+   ```
+   deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/
+   ```
+
+2. **Cambiar al repositorio de paquetes de la próxima versión de Kubernetes:**
+
+   Abre el archivo que define el repositorio apt de Kubernetes con un editor de texto de tu elección:
+   ```bash
+   vi /etc/apt/sources.list.d/kubernetes.list
+   ```
+
+   Deberías ver una línea con la URL que contiene tu versión menor actual de Kubernetes. Por ejemplo, si estás usando la versión `v1.30`, deberías ver esto:
+   ```
+   deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /
+   ```
+
+   Cambia la versión en la URL a la próxima versión menor disponible, por ejemplo:
+   ```
+   deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /
+   ```
+
+## Paso 10: Actualizar el Cluster de la Versión 1.30 a la 1.31.2
 
 ### Paso 1: Actualizar el Nodo de Control (Master)
 
-1. **Verificar la versión actual de `kubeadm`:**
+1. **Verificar la versión actual de `kubeadm` y las mas actuales:**
    ```bash
    kubeadm version
+   ```
+   Verificamos las versiones mas actuales de kubeadm: 
+
+   ```bash
+   sudo apt-cache madison kubeadm
    ```
 
 2. **Desbloquear y actualizar `kubeadm`:**
    ```bash
    sudo apt-mark unhold kubeadm
    sudo apt-get update
-   sudo apt-get install -y kubeadm=1.31.0-00
+   sudo apt-get install -y kubeadm=1.31.2-1.1
    sudo apt-mark hold kubeadm
    ```
 
@@ -238,7 +275,7 @@ Las VMs consisten en:
 
 4. **Aplicar la actualización:**
    ```bash
-   sudo kubeadm upgrade apply v1.31.0
+   sudo kubeadm upgrade apply v1.31.2
    ```
    Sigue las instrucciones en pantalla y confirma cuando se te solicite.
 
@@ -246,7 +283,7 @@ Las VMs consisten en:
    ```bash
    sudo apt-mark unhold kubelet kubectl
    sudo apt-get update
-   sudo apt-get install -y kubelet=1.31.0-00 kubectl=1.31.0-00
+   sudo apt-get install -y kubelet=1.31.2-1.1 kubectl=1.31.2-1.1
    sudo apt-mark hold kubelet kubectl
    sudo systemctl daemon-reload
    sudo systemctl restart kubelet
@@ -254,13 +291,15 @@ Las VMs consisten en:
 
 ### Paso 2: Actualizar los Nodos Worker
 
+**Por cada nodo Worker es necesario ejecutar todos los comandos del Paso 9.2**
+
 Repite los siguientes pasos en cada nodo worker:
 
 1. **Desbloquear y actualizar `kubeadm`:**
    ```bash
    sudo apt-mark unhold kubeadm
    sudo apt-get update
-   sudo apt-get install -y kubeadm=1.31.0-00
+   sudo apt-get install -y kubeadm=1.31.2-1.1
    sudo apt-mark hold kubeadm
    ```
 
@@ -270,22 +309,31 @@ Repite los siguientes pasos en cada nodo worker:
    ```
 
 3. **Drenar el nodo para prepararlo para la actualización:**
+
+   Ejecuta este comando desde el nodo Master.
+
    ```bash
-   kubectl drain <nombre-del-nodo> --ignore-daemonsets --delete-local-data
+   kubectl drain <nombre-del-nodo> --ignore-daemonsets --delete-emptydir-data
    ```
    Reemplaza `<nombre-del-nodo>` con el nombre real del nodo worker.
 
 4. **Actualizar `kubelet` y `kubectl`:**
+
+   Ejecuta estos comandos desde el nodo Worker.
+ 
    ```bash
    sudo apt-mark unhold kubelet kubectl
    sudo apt-get update
-   sudo apt-get install -y kubelet=1.31.0-00 kubectl=1.31.0-00
+   sudo apt-get install -y kubelet=1.31.2-1.1 kubectl=1.31.2-1.1
    sudo apt-mark hold kubelet kubectl
    sudo systemctl daemon-reload
    sudo systemctl restart kubelet
    ```
 
 5. **Habilitar nuevamente el nodo:**
+
+   Ejecuta este comando desde el nodo Master.
+
    ```bash
    kubectl uncordon <nombre-del-nodo>
    ```
@@ -300,6 +348,12 @@ kubectl get nodes
 
 Todos los nodos deberían mostrar la versión `v1.31.0` y tener el estado `Ready`.
 
+```bash
+kubectl get pods
+```
+
+Todos los pods de la aplicación BookInfo deberían estar activos y en estado `Running`.
+
 ## Conclusión
 
-Ahora has creado un cluster Kubernetes con un nodo de control y dos worker nodes, has desplegado la aplicación BookInfo y actualizado el cluster de la versión 1.30 a la 1.31. Estás listo para comenzar a desplegar otras aplicaciones o experimentar con Kubernetes para obtener más experiencia.
+Ahora has creado un cluster Kubernetes con un nodo de control y dos worker nodes, has desplegado la aplicación BookInfo y actualizado el cluster de la versión 1.30 a la 1.31.2. Estás listo para comenzar a desplegar otras aplicaciones o experimentar con Kubernetes para obtener más experiencia.
