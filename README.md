@@ -7,7 +7,7 @@ El objetivo de este laboratorio es configurar un cluster Kubernetes nativo utili
 
 ## Prerrequisitos
 
-- **VirtualBox** (se necesita **Python** y **Win32** como prerrequisitos).
+- **VirtualBox** (se necesita **Python** y **pywin32** como prerrequisitos).
 - **Vagrant**.
 - **MobaXterm** para sesiones SSH.
 
@@ -25,8 +25,8 @@ Las VMs consisten en:
 
 1. Clona el repositorio en tu entorno local:
    ```bash
-   git clone <url-del-repositorio>
-   cd <nombre-del-repositorio>
+   git clone https://github.com/arol-dev/kubernetes-cka-install-upgrade-cluster.git
+   cd kubernetes-cka-install-upgrade-cluster
    ```
 
 2. Dentro del repositorio, ejecuta el siguiente comando para desplegar las VMs:
@@ -111,7 +111,7 @@ Las VMs consisten en:
    echo "CRI runtime instalado con éxito"
    ```
 
-3. Instalar `kubelet`, `kubectl` y `kubeadm`:
+3. Instalar las componentes de Kubernetes `kubelet`, `kubectl` y `kubeadm`:
    ```bash
    curl -fsSL https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/Release.key | \
        gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
@@ -175,8 +175,8 @@ Las VMs consisten en:
 
 ## Paso 7: Configurar el IDE para Trabajar con el Cluster
 
-1. Asegúrate de tener `kubectl` instalado en tu IDE (e.g., Visual Studio Code).
-2. Crea un nuevo archivo `KUBECONFIG` copiando el contenido del archivo `admin.conf` del nodo master.
+1. Asegúrate de tener `kubectl` instalado en tu máquina local. Como IDE, utilizaremos Visual Studio Code.
+2. Crea un nuevo archivo `KUBECONFIG` copiando el contenido del archivo `admin.conf` del nodo master en la ruta `/etc/kubernetes/admin.conf`.
 3. Define la variable `KUBECONFIG` apuntando al archivo creado.
 4. Verifica los contextos disponibles:
    ```bash
