@@ -1,5 +1,5 @@
 
-# Kubernetes Cluster Setup Lab - CKA Course
+# Kubernetes Cluster Setup and Upgrade Lab - CKA Course
 
 ## Descripción del Laboratorio
 
@@ -213,6 +213,93 @@ Las VMs consisten en:
    kubectl -n kube-system rollout restart deployment coredns
    ```
 
+## Paso 9: Actualizar el Cluster de la Versión 1.30 a la 1.31
+
+### Paso 1: Actualizar el Nodo de Control (Master)
+
+1. **Verificar la versión actual de `kubeadm`:**
+   ```bash
+   kubeadm version
+   ```
+
+2. **Desbloquear y actualizar `kubeadm`:**
+   ```bash
+   sudo apt-mark unhold kubeadm
+   sudo apt-get update
+   sudo apt-get install -y kubeadm=1.31.0-00
+   sudo apt-mark hold kubeadm
+   ```
+
+3. **Planificar la actualización:**
+   ```bash
+   sudo kubeadm upgrade plan
+   ```
+   Este comando mostrará las versiones disponibles para la actualización y cualquier acción adicional necesaria.
+
+4. **Aplicar la actualización:**
+   ```bash
+   sudo kubeadm upgrade apply v1.31.0
+   ```
+   Sigue las instrucciones en pantalla y confirma cuando se te solicite.
+
+5. **Actualizar `kubelet` y `kubectl`:**
+   ```bash
+   sudo apt-mark unhold kubelet kubectl
+   sudo apt-get update
+   sudo apt-get install -y kubelet=1.31.0-00 kubectl=1.31.0-00
+   sudo apt-mark hold kubelet kubectl
+   sudo systemctl daemon-reload
+   sudo systemctl restart kubelet
+   ```
+
+### Paso 2: Actualizar los Nodos Worker
+
+Repite los siguientes pasos en cada nodo worker:
+
+1. **Desbloquear y actualizar `kubeadm`:**
+   ```bash
+   sudo apt-mark unhold kubeadm
+   sudo apt-get update
+   sudo apt-get install -y kubeadm=1.31.0-00
+   sudo apt-mark hold kubeadm
+   ```
+
+2. **Actualizar la configuración del nodo:**
+   ```bash
+   sudo kubeadm upgrade node
+   ```
+
+3. **Drenar el nodo para prepararlo para la actualización:**
+   ```bash
+   kubectl drain <nombre-del-nodo> --ignore-daemonsets --delete-local-data
+   ```
+   Reemplaza `<nombre-del-nodo>` con el nombre real del nodo worker.
+
+4. **Actualizar `kubelet` y `kubectl`:**
+   ```bash
+   sudo apt-mark unhold kubelet kubectl
+   sudo apt-get update
+   sudo apt-get install -y kubelet=1.31.0-00 kubectl=1.31.0-00
+   sudo apt-mark hold kubelet kubectl
+   sudo systemctl daemon-reload
+   sudo systemctl restart kubelet
+   ```
+
+5. **Habilitar nuevamente el nodo:**
+   ```bash
+   kubectl uncordon <nombre-del-nodo>
+   ```
+
+### Paso 3: Verificar la Actualización
+
+Después de actualizar todos los nodos, verifica que todos estén funcionando correctamente:
+
+```bash
+kubectl get nodes
+```
+
+Todos los nodos deberían mostrar la versión `v1.31.0` y tener el estado `Ready`.
+
 ## Conclusión
 
-Ahora has creado un cluster Kubernetes con un nodo de control y dos worker nodes, y has desplegado la aplicación BookInfo. Estás listo para comenzar a desplegar otras aplicaciones o experimentar con Kubernetes para obtener más experiencia.
+Ahora has creado un cluster Kubernetes con un nodo de control y dos worker nodes, has desplegado la aplicación BookInfo y actualizado el cluster de la versión 1.30 a la 1.31. Estás listo para comenzar a desplegar otras aplicaciones o experimentar con Kubernetes para obtener más experiencia.
